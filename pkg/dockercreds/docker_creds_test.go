@@ -132,6 +132,32 @@ func testDockerCreds(t *testing.T, when spec.G, it spec.S) {
 				},
 			})
 		})
+
+		it("respect registries paths", func() {
+			creds := DockerCreds{
+				"gcr.io/dontoverwritme": authn.AuthConfig{
+					Auth: "dontOverwriteMe=",
+				},
+			}
+
+			newCreds, err := creds.Append(DockerCreds{
+				"gcr.io/tonotbeoverwritten": authn.AuthConfig{
+					Auth: "ToNotBeOverwritten=",
+				},
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, newCreds, DockerCreds{
+				"gcr.io/dontoverwritme": authn.AuthConfig{
+					Auth: "dontOverwriteMe=",
+				},
+				"gcr.io/tonotbeoverwritten": authn.AuthConfig{
+					Auth: "ToNotBeOverwritten=",
+				},
+			})
+
+		})
+
 	})
 
 	when("#Resolve", func() {
@@ -146,6 +172,7 @@ func testDockerCreds(t *testing.T, when spec.G, it spec.S) {
 			}
 
 			reference, err := name.ParseReference("some.reg/name", name.WeakValidation)
+
 			require.NoError(t, err)
 
 			auth, err := creds.Resolve(reference.Context().Registry)
@@ -154,6 +181,37 @@ func testDockerCreds(t *testing.T, when spec.G, it spec.S) {
 			assert.Equal(t, authn.FromConfig(authn.AuthConfig{
 				Auth: "match-Auth=",
 			}), auth)
+		})
+
+		it("returns auth for matching registry with path", func() {
+			creds := DockerCreds{
+				"some.reg/match1": authn.AuthConfig{
+					Auth: "match1",
+				},
+				"some.reg/match2": authn.AuthConfig{
+					Auth: "match2=",
+				},
+			}
+
+			reference, err := name.ParseReference("some.reg/match1:my-image", name.WeakValidation)
+			require.NoError(t, err)
+
+			auth, err := creds.Resolve(reference.Context().Registry)
+			require.NoError(t, err)
+
+			assert.Equal(t, authn.FromConfig(authn.AuthConfig{
+				Auth: "match1=",
+			}), auth)
+
+			reference2, err := name.ParseReference("some.reg/match2:my-image", name.WeakValidation)
+			require.NoError(t, err)
+
+			auth2, err := creds.Resolve(reference2.Context().Registry)
+			require.NoError(t, err)
+
+			assert.Equal(t, authn.FromConfig(authn.AuthConfig{
+				Auth: "match2=",
+			}), auth2)
 		})
 
 		it("returns auth for matching registry with only username and password", func() {

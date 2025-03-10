@@ -16,7 +16,8 @@ type DockerCreds map[string]authn.AuthConfig
 func (c DockerCreds) Resolve(reg authn.Resource) (authn.Authenticator, error) {
 	for registry, entry := range c {
 		matcher := RegistryMatcher{Registry: registry}
-		if matcher.Match(reg.RegistryStr()) {
+
+		if matcher.Match(reg.String()) || matcher.Match(reg.RegistryStr()) {
 			return authn.FromConfig(entry), nil
 		}
 	}
@@ -71,9 +72,14 @@ func (c DockerCreds) contains(reg string) (bool, error) {
 		return false, err
 	}
 
+	registryFQN := u.Host
+	if u.Path != "" {
+		registryFQN += "/" + u.Path
+	}
+
 	for existingRegistry := range c {
 		matcher := RegistryMatcher{Registry: existingRegistry}
-		if matcher.Match(u.Host) {
+		if matcher.Match(registryFQN) {
 			return true, nil
 		}
 	}

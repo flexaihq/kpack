@@ -755,7 +755,7 @@ func deleteImageTag(t *testing.T, deleteImageTag string) {
 		return
 	}
 
-	authenticator, err := authn.DefaultKeychain.Resolve(reference.Context().Registry)
+	authenticator, err := authn.DefaultKeychain.Resolve(reference.Context())
 	if err != nil {
 		t.Logf("error cleaning up: could not resolve keychain to delete tag: %s", err)
 		return
